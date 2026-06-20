@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 import gspread
 import plotly.express as px
+import os
 from google.oauth2.service_account import Credentials
 
 # =========================
@@ -58,21 +59,38 @@ st.markdown("""
 # =========================
 def obtener_credenciales(scopes):
     """
-    En local usa credenciales_google.json.
     En Streamlit Cloud usa st.secrets["gcp_service_account"].
-    """
-    try:
-        if "gcp_service_account" in st.secrets:
-            return Credentials.from_service_account_info(
-                dict(st.secrets["gcp_service_account"]),
-                scopes=scopes
-            )
-    except Exception:
-        pass
+    En local usa credenciales_google.json.
 
-    return Credentials.from_service_account_file(
-        CREDENCIALES_LOCALES,
-        scopes=scopes
+    IMPORTANTE:
+    - En Streamlit Cloud, los secrets deben estar en formato TOML:
+      [gcp_service_account]
+      type = "service_account"
+      ...
+    - No subas credenciales_google.json a GitHub.
+    """
+
+    if "gcp_service_account" in st.secrets:
+        info = dict(st.secrets["gcp_service_account"])
+
+        # Por si la private_key fue pegada con \\n literal en vez de saltos reales.
+        if "private_key" in info:
+            info["private_key"] = info["private_key"].replace("\\n", "\n")
+
+        return Credentials.from_service_account_info(
+            info,
+            scopes=scopes
+        )
+
+    if os.path.exists(CREDENCIALES_LOCALES):
+        return Credentials.from_service_account_file(
+            CREDENCIALES_LOCALES,
+            scopes=scopes
+        )
+
+    raise FileNotFoundError(
+        "No encontré credenciales. En Streamlit Cloud configura Secrets como "
+        "[gcp_service_account]. En local coloca credenciales_google.json junto al dashboard."
     )
 
 
@@ -199,10 +217,11 @@ st.markdown(
 
 try:
     df = cargar_datos()
-except FileNotFoundError:
-    st.error(
-        "No encontré credenciales_google.json. En local pon ese archivo junto a este dashboard. "
-        "En Streamlit Cloud configura los Secrets."
+except FileNotFoundError as e:
+    st.error(str(e))
+    st.info(
+        "En Streamlit Cloud ve a App settings → Secrets y pega tus credenciales en formato TOML "
+        "con el encabezado [gcp_service_account]."
     )
     st.stop()
 except Exception as e:
