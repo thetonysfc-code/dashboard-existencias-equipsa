@@ -55,6 +55,41 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================
+# nuevo bloque
+# =========================
+
+st.markdown("""
+<style>
+div[data-testid="stMetric"] {
+    background: #f8fafc;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+}
+
+div[data-testid="stMetric"] label,
+div[data-testid="stMetric"] label p {
+    color: #111827 !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+}
+
+div[data-testid="stMetricValue"],
+div[data-testid="stMetricValue"] div {
+    color: #111827 !important;
+    font-size: 30px !important;
+    font-weight: 800 !important;
+}
+
+div[data-testid="stMetricDelta"],
+div[data-testid="stMetricDelta"] div {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
 # GOOGLE SHEETS
 # =========================
 def obtener_credenciales(scopes):
