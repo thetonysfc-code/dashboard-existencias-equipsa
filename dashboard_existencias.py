@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 import gspread
 import plotly.express as px
 import os
@@ -16,6 +17,11 @@ st.set_page_config(
     page_title="Dashboard Existencias EQUIPSA",
     page_icon="📊",
     layout="wide"
+)
+
+st_autorefresh(
+    interval=5000,   # Actualiza cada 5 segundos
+    key="actualizacion_dashboard"
 )
 
 # =========================
