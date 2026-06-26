@@ -16,8 +16,8 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1zbw_mEEZeoh3Qxy-2d20Qhaogo_
 CREDENCIALES_LOCALES = "credenciales_google.json"
 HOJA_REGISTROS = "Registros"
 
-REFRESH_MS = 5000
-CACHE_TTL = 5
+REFRESH_MS = 60000
+CACHE_TTL = 120
 
 st.set_page_config(
     page_title="Dashboard Existencias EQUIPSA",
@@ -26,7 +26,7 @@ st.set_page_config(
 )
 
 st_autorefresh(
-    interval=60000,
+    interval=REFRESH_MS,
     key="actualizacion_dashboard"
 )
 
@@ -216,7 +216,7 @@ def obtener_credenciales(scopes):
     )
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=CACHE_TTL)
 def cargar_datos():
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -516,7 +516,7 @@ with col_top:
         fig_top.update_xaxes(title="Solicitudes")
         fig_top.update_traces(textposition="outside", cliponaxis=False)
         fig_top = aplicar_layout_plotly(fig_top, 500)
-        st.plotly_chart(fig_top, use_container_width=stretch)
+        st.plotly_chart(fig_top, width="stretch")
     else:
         st.info("No hay datos para mostrar.")
 
@@ -540,7 +540,7 @@ with col_agentes:
         fig_agentes.update_xaxes(title="Solicitudes")
         fig_agentes.update_traces(textposition="outside", cliponaxis=False)
         fig_agentes = aplicar_layout_plotly(fig_agentes, 500)
-        st.plotly_chart(fig_agentes, use_container_width=stretch)
+        st.plotly_chart(fig_agentes, width="stretch")
     else:
         st.info("No hay agentes para mostrar.")
 
@@ -564,7 +564,7 @@ with col_tipo:
             title="Causa del faltante"
         )
         fig_tipo = aplicar_layout_plotly(fig_tipo, 420)
-        st.plotly_chart(fig_tipo, use_container_width=stretch)
+        st.plotly_chart(fig_tipo, width="stretch")
     else:
         st.info("No hay datos por tipo.")
 
@@ -586,7 +586,7 @@ with col_dia:
         fig_dia.update_xaxes(title="Día")
         fig_dia.update_yaxes(title="Solicitudes")
         fig_dia = aplicar_layout_plotly(fig_dia, 420)
-        st.plotly_chart(fig_dia, use_container_width=stretch)
+        st.plotly_chart(fig_dia, width="stretch")
     else:
         st.info("No hay datos para tendencia diaria.")
 
@@ -613,7 +613,7 @@ with col_hora:
         fig_hora.update_xaxes(title="Hora del día", dtick=1)
         fig_hora.update_yaxes(title="Solicitudes")
         fig_hora = aplicar_layout_plotly(fig_hora, 360)
-        st.plotly_chart(fig_hora, use_container_width=stretch)
+        st.plotly_chart(fig_hora, width="stretch")
     else:
         st.info("No hay datos por hora.")
 
@@ -622,7 +622,7 @@ with col_hora:
 with col_tabla_top:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">📋 Tabla Top 15</div>', unsafe_allow_html=True)
-    st.dataframe(top15, use_container_width=stretch, hide_index=True, height=360)
+    st.dataframe(top15, width="stretch", hide_index=True, height=360)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
@@ -631,7 +631,7 @@ with col_tabla_top:
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="section-title">📅 Resumen mensual por NP</div>', unsafe_allow_html=True)
 mensual = resumen_mensual(filtrado)
-st.dataframe(mensual, use_container_width=stretch, hide_index=True, height=360)
+st.dataframe(mensual, width="stretch", hide_index=True, height=360)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
@@ -643,7 +643,7 @@ st.markdown('<div class="section-title">🔍 Registros filtrados</div>', unsafe_
 columnas = [c for c in ["Fecha", "Agente", "Numero Parte", "Tipo"] if c in filtrado.columns]
 registros_filtrados = filtrado[columnas].sort_values("Fecha", ascending=False)
 
-st.dataframe(registros_filtrados, use_container_width=stretch, hide_index=True, height=420)
+st.dataframe(registros_filtrados, width="stretch", hide_index=True, height=420)
 
 csv = registros_filtrados.to_csv(index=False).encode("utf-8-sig")
 st.download_button(
