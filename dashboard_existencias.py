@@ -1,9 +1,12 @@
+import os
+from datetime import datetime
+
 import pandas as pd
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import gspread
 import plotly.express as px
-import os
+import plotly.graph_objects as go
 from google.oauth2.service_account import Credentials
 
 # =========================
@@ -13,6 +16,9 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1zbw_mEEZeoh3Qxy-2d20Qhaogo_
 CREDENCIALES_LOCALES = "credenciales_google.json"
 HOJA_REGISTROS = "Registros"
 
+REFRESH_MS = 5000
+CACHE_TTL = 5
+
 st.set_page_config(
     page_title="Dashboard Existencias EQUIPSA",
     page_icon="📊",
@@ -20,80 +26,170 @@ st.set_page_config(
 )
 
 st_autorefresh(
-    interval=5000,   # Actualiza cada 5 segundos
+    interval=REFRESH_MS,
     key="actualizacion_dashboard"
 )
 
 # =========================
-# ESTILOS
+# ESTILOS V2 CORPORATIVO
 # =========================
 st.markdown("""
 <style>
-    .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 2rem;
-    }
-    .main-title {
-        font-size: 38px;
-        font-weight: 800;
-        margin-bottom: 0px;
-        color: #111827;
-    }
-    .subtitle {
-        font-size: 16px;
-        color: #6b7280;
-        margin-bottom: 25px;
-    }
-    .section-title {
-        font-size: 22px;
-        font-weight: 700;
-        margin-top: 10px;
-        margin-bottom: 8px;
-    }
-    div[data-testid="stMetric"] {
-        background: #f8fafc;
-        padding: 18px;
-        border-radius: 16px;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    }
-</style>
-""", unsafe_allow_html=True)
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 
-# =========================
-# nuevo bloque
-# =========================
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
 
-st.markdown("""
-<style>
+.stApp {
+    background:
+        radial-gradient(circle at top left, rgba(34, 197, 94, 0.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 30%),
+        linear-gradient(135deg, #0b1120 0%, #111827 45%, #020617 100%);
+    color: #f8fafc;
+}
+
+.block-container {
+    padding-top: 1.4rem;
+    padding-bottom: 2rem;
+    max-width: 1500px;
+}
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+    border-right: 1px solid rgba(148, 163, 184, 0.20);
+}
+
+[data-testid="stSidebar"] * {
+    color: #e5e7eb;
+}
+
+.hero {
+    padding: 22px 26px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.76));
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+    margin-bottom: 20px;
+}
+
+.hero-title {
+    font-size: 38px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.hero-subtitle {
+    font-size: 15px;
+    color: #cbd5e1;
+    margin-bottom: 0;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(34,197,94,0.15);
+    color: #86efac;
+    border: 1px solid rgba(34,197,94,0.30);
+    font-size: 13px;
+    font-weight: 800;
+    margin-top: 10px;
+}
+
+.kpi-card {
+    min-height: 138px;
+    padding: 20px 22px;
+    border-radius: 22px;
+    background: linear-gradient(145deg, rgba(248,250,252,0.98), rgba(226,232,240,0.92));
+    border: 1px solid rgba(255,255,255,0.35);
+    box-shadow: 0 18px 35px rgba(0,0,0,0.22);
+    color: #0f172a;
+}
+
+.kpi-label {
+    font-size: 14px;
+    font-weight: 800;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.kpi-value {
+    font-size: 33px;
+    line-height: 1.05;
+    font-weight: 900;
+    color: #020617;
+    overflow-wrap: anywhere;
+}
+
+.kpi-delta {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.section-card {
+    padding: 18px 18px;
+    border-radius: 22px;
+    background: rgba(15, 23, 42, 0.76);
+    border: 1px solid rgba(148, 163, 184, 0.20);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.23);
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 21px;
+    font-weight: 900;
+    color: #ffffff;
+    margin-bottom: 14px;
+    letter-spacing: -0.02em;
+}
+
+.small-note {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
 div[data-testid="stMetric"] {
-    background: #f8fafc;
+    background: rgba(248,250,252,0.96);
     padding: 18px;
     border-radius: 16px;
     border: 1px solid #e5e7eb;
 }
 
 div[data-testid="stMetric"] label,
-div[data-testid="stMetric"] label p {
-    color: #111827 !important;
-    font-size: 15px !important;
-    font-weight: 700 !important;
-}
-
+div[data-testid="stMetric"] label p,
 div[data-testid="stMetricValue"],
 div[data-testid="stMetricValue"] div {
     color: #111827 !important;
-    font-size: 30px !important;
-    font-weight: 800 !important;
 }
 
-div[data-testid="stMetricDelta"],
-div[data-testid="stMetricDelta"] div {
-    font-size: 14px !important;
-    font-weight: 700 !important;
+[data-testid="stDataFrame"] {
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+hr {
+    border-color: rgba(148, 163, 184, 0.18);
+}
+
+.stDownloadButton button {
+    background: linear-gradient(135deg, #2563eb, #16a34a);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-weight: 800;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 # =========================
 # GOOGLE SHEETS
@@ -102,32 +198,17 @@ def obtener_credenciales(scopes):
     """
     En Streamlit Cloud usa st.secrets["gcp_service_account"].
     En local usa credenciales_google.json.
-
-    IMPORTANTE:
-    - En Streamlit Cloud, los secrets deben estar en formato TOML:
-      [gcp_service_account]
-      type = "service_account"
-      ...
-    - No subas credenciales_google.json a GitHub.
     """
-
     if "gcp_service_account" in st.secrets:
         info = dict(st.secrets["gcp_service_account"])
 
-        # Por si la private_key fue pegada con \\n literal en vez de saltos reales.
         if "private_key" in info:
             info["private_key"] = info["private_key"].replace("\\n", "\n")
 
-        return Credentials.from_service_account_info(
-            info,
-            scopes=scopes
-        )
+        return Credentials.from_service_account_info(info, scopes=scopes)
 
     if os.path.exists(CREDENCIALES_LOCALES):
-        return Credentials.from_service_account_file(
-            CREDENCIALES_LOCALES,
-            scopes=scopes
-        )
+        return Credentials.from_service_account_file(CREDENCIALES_LOCALES, scopes=scopes)
 
     raise FileNotFoundError(
         "No encontré credenciales. En Streamlit Cloud configura Secrets como "
@@ -135,7 +216,7 @@ def obtener_credenciales(scopes):
     )
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=CACHE_TTL)
 def cargar_datos():
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -166,6 +247,8 @@ def cargar_datos():
 
     df["Mes"] = df["Fecha"].dt.strftime("%Y-%m")
     df["Dia"] = df["Fecha"].dt.date
+    df["Hora"] = df["Fecha"].dt.hour
+    df["Dia Semana"] = df["Fecha"].dt.day_name()
 
     df["Numero Parte"] = df["Numero Parte"].astype(str).str.strip().str.upper()
     df["Agente"] = df["Agente"].astype(str).str.strip()
@@ -179,21 +262,22 @@ def cargar_datos():
 
 
 # =========================
-# TABLAS / RESÚMENES
+# RESÚMENES
 # =========================
-def tabla_top(df, n=20):
+def tabla_top(df, n=15):
     if df.empty:
         return pd.DataFrame(columns=["Ranking", "Numero Parte", "Veces", "Tipo"])
 
     top = (
-        df.groupby(["Numero Parte", "Tipo"])
+        df.groupby(["Numero Parte", "Tipo"], as_index=False)
         .size()
-        .reset_index(name="Veces")
+        .rename(columns={"size": "Veces"})
         .sort_values("Veces", ascending=False)
         .head(n)
         .reset_index(drop=True)
     )
 
+    top["Numero Parte"] = top["Numero Parte"].astype(str)
     top.insert(0, "Ranking", range(1, len(top) + 1))
     return top
 
@@ -202,12 +286,14 @@ def resumen_mensual(df):
     if df.empty:
         return pd.DataFrame(columns=["Mes", "Numero Parte", "Tipo", "Veces"])
 
-    return (
-        df.groupby(["Mes", "Numero Parte", "Tipo"])
+    out = (
+        df.groupby(["Mes", "Numero Parte", "Tipo"], as_index=False)
         .size()
-        .reset_index(name="Veces")
+        .rename(columns={"size": "Veces"})
         .sort_values(["Mes", "Veces"], ascending=[False, False])
     )
+    out["Numero Parte"] = out["Numero Parte"].astype(str)
+    return out
 
 
 def resumen_agentes(df):
@@ -215,9 +301,9 @@ def resumen_agentes(df):
         return pd.DataFrame(columns=["Agente", "Solicitudes"])
 
     return (
-        df.groupby("Agente")
+        df.groupby("Agente", as_index=False)
         .size()
-        .reset_index(name="Solicitudes")
+        .rename(columns={"size": "Solicitudes"})
         .sort_values("Solicitudes", ascending=False)
     )
 
@@ -227,9 +313,9 @@ def resumen_tipo(df):
         return pd.DataFrame(columns=["Tipo", "Solicitudes"])
 
     return (
-        df.groupby("Tipo")
+        df.groupby("Tipo", as_index=False)
         .size()
-        .reset_index(name="Solicitudes")
+        .rename(columns={"size": "Solicitudes"})
         .sort_values("Solicitudes", ascending=False)
     )
 
@@ -239,23 +325,60 @@ def solicitudes_por_dia(df):
         return pd.DataFrame(columns=["Dia", "Solicitudes"])
 
     return (
-        df.groupby("Dia")
+        df.groupby("Dia", as_index=False)
         .size()
-        .reset_index(name="Solicitudes")
+        .rename(columns={"size": "Solicitudes"})
         .sort_values("Dia")
     )
+
+
+def solicitudes_por_hora(df):
+    if df.empty:
+        return pd.DataFrame(columns=["Hora", "Solicitudes"])
+
+    base = (
+        df.groupby("Hora", as_index=False)
+        .size()
+        .rename(columns={"size": "Solicitudes"})
+        .sort_values("Hora")
+    )
+    return base
+
+
+def kpi_card(icon, label, value, delta=None):
+    delta_html = f'<div class="kpi-delta">↑ {delta}</div>' if delta else ""
+    st.markdown(
+        f"""
+        <div class="kpi-card">
+            <div class="kpi-label">{icon} {label}</div>
+            <div class="kpi-value">{value}</div>
+            {delta_html}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def aplicar_layout_plotly(fig, height=420):
+    fig.update_layout(
+        height=height,
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#e5e7eb", family="Inter"),
+        margin=dict(l=10, r=10, t=55, b=20),
+        legend=dict(
+            bgcolor="rgba(0,0,0,0)",
+            bordercolor="rgba(255,255,255,0.1)",
+            borderwidth=0
+        )
+    )
+    return fig
 
 
 # =========================
 # UI PRINCIPAL
 # =========================
-st.markdown('<div class="main-title">📊 Dashboard de Faltantes EQUIPSA</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="subtitle">Monitoreo de números de parte solicitados y sin stock desde Google Sheets. '
-    'Actualización automática cada 60 segundos.</div>',
-    unsafe_allow_html=True
-)
-
 try:
     df = cargar_datos()
 except FileNotFoundError as e:
@@ -273,10 +396,29 @@ if df.empty:
     st.warning("Todavía no hay registros en la hoja Registros.")
     st.stop()
 
+ultima_fecha = df["Fecha"].max()
+ahora = datetime.now()
+minutos_desde_actualizacion = (ahora - ultima_fecha.to_pydatetime()).total_seconds() / 60 if pd.notna(ultima_fecha) else 999
+estado_bot = "🟢 ACTIVO" if minutos_desde_actualizacion <= 30 else "🟡 SIN REGISTROS RECIENTES"
+
+st.markdown(
+    f"""
+    <div class="hero">
+        <div class="hero-title">📊 Dashboard de Faltantes EQUIPSA</div>
+        <div class="hero-subtitle">
+            Inteligencia de faltantes desde WhatsApp + Google Sheets.
+            Actualización automática cada {int(REFRESH_MS/1000)} segundos.
+        </div>
+        <div class="status-pill">{estado_bot} · Último registro: {ultima_fecha.strftime('%Y-%m-%d %H:%M:%S')}</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 # =========================
 # FILTROS
 # =========================
-st.sidebar.header("🔎 Filtros")
+st.sidebar.markdown("## 🔎 Filtros ejecutivos")
 
 meses = sorted(df["Mes"].dropna().unique(), reverse=True)
 mes_sel = st.sidebar.multiselect("Mes", meses, default=meses[:1] if meses else [])
@@ -288,6 +430,15 @@ tipos = sorted(df["Tipo"].dropna().unique())
 tipo_sel = st.sidebar.multiselect("Tipo", tipos)
 
 busqueda_np = st.sidebar.text_input("Buscar número de parte")
+
+fecha_min = df["Fecha"].min().date()
+fecha_max = df["Fecha"].max().date()
+rango_fechas = st.sidebar.date_input(
+    "Rango de fechas",
+    value=(fecha_min, fecha_max),
+    min_value=fecha_min,
+    max_value=fecha_max
+)
 
 filtrado = df.copy()
 
@@ -305,50 +456,55 @@ if busqueda_np:
         filtrado["Numero Parte"].str.contains(busqueda_np.upper().strip(), na=False)
     ]
 
+if isinstance(rango_fechas, tuple) and len(rango_fechas) == 2:
+    inicio, fin = rango_fechas
+    filtrado = filtrado[
+        (filtrado["Fecha"].dt.date >= inicio) &
+        (filtrado["Fecha"].dt.date <= fin)
+    ]
+
 # =========================
 # KPIs
 # =========================
-top20 = tabla_top(filtrado, 20)
+top15 = tabla_top(filtrado, 15)
 agentes_df = resumen_agentes(filtrado)
 tipo_df = resumen_tipo(filtrado)
 
 total_solicitudes = len(filtrado)
-np_unicos = filtrado["Numero Parte"].nunique()
-top_np = top20.iloc[0]["Numero Parte"] if not top20.empty else "-"
-top_np_veces = int(top20.iloc[0]["Veces"]) if not top20.empty else 0
-top_agente = agentes_df.iloc[0]["Agente"] if not agentes_df.empty else "-"
+np_unicos = filtrado["Numero Parte"].nunique() if not filtrado.empty else 0
+top_np = str(top15.iloc[0]["Numero Parte"]) if not top15.empty else "-"
+top_np_veces = int(top15.iloc[0]["Veces"]) if not top15.empty else 0
+top_agente = str(agentes_df.iloc[0]["Agente"]) if not agentes_df.empty else "-"
 top_agente_veces = int(agentes_df.iloc[0]["Solicitudes"]) if not agentes_df.empty else 0
 
 col1, col2, col3, col4 = st.columns(4)
-
 with col1:
-    st.metric("📦 Solicitudes", total_solicitudes)
-
+    kpi_card("📦", "Solicitudes", f"{total_solicitudes:,}", "periodo filtrado")
 with col2:
-    st.metric("🔩 NP únicos", np_unicos)
-
+    kpi_card("🔩", "NP únicos", f"{np_unicos:,}", "números distintos")
 with col3:
-    st.metric("👑 NP más pedido", top_np, f"{top_np_veces} solicitudes")
-
+    kpi_card("👑", "NP más solicitado", top_np, f"{top_np_veces} solicitudes")
 with col4:
-    st.metric("🏆 Agente top", top_agente, f"{top_agente_veces} solicitudes")
+    kpi_card("🏆", "Agente top", top_agente, f"{top_agente_veces} solicitudes")
 
-st.divider()
+st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
-# TOP 20
+# FILA PRINCIPAL: TOP NP + AGENTES
 # =========================
-st.markdown('<div class="section-title">🔥 Top 20 piezas más pedidas y sin stock</div>', unsafe_allow_html=True)
+col_top, col_agentes = st.columns([1.35, 1])
 
-col_top_table, col_top_chart = st.columns([1.1, 1.4])
+with col_top:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🏆 Top 15 números de parte faltantes</div>', unsafe_allow_html=True)
 
-with col_top_table:
-    st.dataframe(top20, use_container_width=True, hide_index=True)
+    if not top15.empty:
+        chart_top = top15.copy()
+        chart_top["Numero Parte"] = chart_top["Numero Parte"].astype(str)
+        chart_top = chart_top.sort_values("Veces", ascending=True)
 
-with col_top_chart:
-    if not top20.empty:
         fig_top = px.bar(
-            top20.sort_values("Veces"),
+            chart_top,
             x="Veces",
             y="Numero Parte",
             color="Tipo",
@@ -356,96 +512,138 @@ with col_top_chart:
             text="Veces",
             title="Ranking por solicitudes"
         )
-        fig_top.update_layout(
-            height=520,
-            yaxis_title="Número de parte",
-            xaxis_title="Solicitudes",
-            legend_title="Tipo"
-        )
+        fig_top.update_yaxes(type="category", title="")
+        fig_top.update_xaxes(title="Solicitudes")
+        fig_top.update_traces(textposition="outside", cliponaxis=False)
+        fig_top = aplicar_layout_plotly(fig_top, 500)
         st.plotly_chart(fig_top, use_container_width=True)
     else:
         st.info("No hay datos para mostrar.")
 
-st.divider()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# =========================
-# AGENTES Y TIPOS
-# =========================
-col_a, col_b = st.columns(2)
-
-with col_a:
-    st.markdown('<div class="section-title">👤 Solicitudes por agente</div>', unsafe_allow_html=True)
-    st.dataframe(agentes_df, use_container_width=True, hide_index=True)
+with col_agentes:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">👥 Ranking por agente</div>', unsafe_allow_html=True)
 
     if not agentes_df.empty:
+        agentes_chart = agentes_df.sort_values("Solicitudes", ascending=True).tail(12)
         fig_agentes = px.bar(
-            agentes_df.sort_values("Solicitudes"),
+            agentes_chart,
             x="Solicitudes",
             y="Agente",
             orientation="h",
             text="Solicitudes",
-            title="Solicitudes capturadas por agente"
+            title="Solicitudes capturadas"
         )
-        fig_agentes.update_layout(height=420, yaxis_title="Agente", xaxis_title="Solicitudes")
+        fig_agentes.update_yaxes(title="")
+        fig_agentes.update_xaxes(title="Solicitudes")
+        fig_agentes.update_traces(textposition="outside", cliponaxis=False)
+        fig_agentes = aplicar_layout_plotly(fig_agentes, 500)
         st.plotly_chart(fig_agentes, use_container_width=True)
+    else:
+        st.info("No hay agentes para mostrar.")
 
-with col_b:
-    st.markdown('<div class="section-title">❌ Solicitudes por tipo</div>', unsafe_allow_html=True)
-    st.dataframe(tipo_df, use_container_width=True, hide_index=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# =========================
+# FILA 2: TIPO + TENDENCIA
+# =========================
+col_tipo, col_dia = st.columns([0.85, 1.45])
+
+with col_tipo:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">❌ Distribución por tipo</div>', unsafe_allow_html=True)
 
     if not tipo_df.empty:
         fig_tipo = px.pie(
             tipo_df,
             names="Tipo",
             values="Solicitudes",
-            title="Distribución por tipo de faltante",
-            hole=0.42
+            hole=0.55,
+            title="Causa del faltante"
         )
-        fig_tipo.update_layout(height=420)
+        fig_tipo = aplicar_layout_plotly(fig_tipo, 420)
         st.plotly_chart(fig_tipo, use_container_width=True)
+    else:
+        st.info("No hay datos por tipo.")
 
-st.divider()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with col_dia:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📈 Tendencia diaria</div>', unsafe_allow_html=True)
+
+    dia_df = solicitudes_por_dia(filtrado)
+    if not dia_df.empty:
+        fig_dia = px.area(
+            dia_df,
+            x="Dia",
+            y="Solicitudes",
+            markers=True,
+            title="Solicitudes por día"
+        )
+        fig_dia.update_xaxes(title="Día")
+        fig_dia.update_yaxes(title="Solicitudes")
+        fig_dia = aplicar_layout_plotly(fig_dia, 420)
+        st.plotly_chart(fig_dia, use_container_width=True)
+    else:
+        st.info("No hay datos para tendencia diaria.")
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# TENDENCIA DIARIA
+# FILA 3: ACTIVIDAD POR HORA + TABLAS EJECUTIVAS
 # =========================
-st.markdown('<div class="section-title">📈 Tendencia diaria</div>', unsafe_allow_html=True)
+col_hora, col_tabla_top = st.columns([1, 1.35])
 
-dia_df = solicitudes_por_dia(filtrado)
+with col_hora:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">⏱️ Actividad por hora</div>', unsafe_allow_html=True)
 
-if not dia_df.empty:
-    fig_dia = px.line(
-        dia_df,
-        x="Dia",
-        y="Solicitudes",
-        markers=True,
-        title="Solicitudes por día"
-    )
-    fig_dia.update_layout(height=380, xaxis_title="Día", yaxis_title="Solicitudes")
-    st.plotly_chart(fig_dia, use_container_width=True)
-else:
-    st.info("No hay datos para tendencia diaria.")
+    hora_df = solicitudes_por_hora(filtrado)
+    if not hora_df.empty:
+        fig_hora = px.bar(
+            hora_df,
+            x="Hora",
+            y="Solicitudes",
+            text="Solicitudes",
+            title="Distribución horaria"
+        )
+        fig_hora.update_xaxes(title="Hora del día", dtick=1)
+        fig_hora.update_yaxes(title="Solicitudes")
+        fig_hora = aplicar_layout_plotly(fig_hora, 360)
+        st.plotly_chart(fig_hora, use_container_width=True)
+    else:
+        st.info("No hay datos por hora.")
 
-st.divider()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with col_tabla_top:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📋 Tabla Top 15</div>', unsafe_allow_html=True)
+    st.dataframe(top15, use_container_width=True, hide_index=True, height=360)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
 # RESUMEN MENSUAL
 # =========================
-st.markdown('<div class="section-title">📅 Resumen mensual</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="section-title">📅 Resumen mensual por NP</div>', unsafe_allow_html=True)
 mensual = resumen_mensual(filtrado)
-st.dataframe(mensual, use_container_width=True, hide_index=True)
-
-st.divider()
+st.dataframe(mensual, use_container_width=True, hide_index=True, height=360)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
 # REGISTROS
 # =========================
-st.markdown('<div class="section-title">📋 Registros filtrados</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="section-title">🔍 Registros filtrados</div>', unsafe_allow_html=True)
 
 columnas = [c for c in ["Fecha", "Agente", "Numero Parte", "Tipo"] if c in filtrado.columns]
 registros_filtrados = filtrado[columnas].sort_values("Fecha", ascending=False)
 
-st.dataframe(registros_filtrados, use_container_width=True, hide_index=True)
+st.dataframe(registros_filtrados, use_container_width=True, hide_index=True, height=420)
 
 csv = registros_filtrados.to_csv(index=False).encode("utf-8-sig")
 st.download_button(
@@ -455,4 +653,8 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Dashboard conectado a Google Sheets. Cache de lectura: 60 segundos.")
+st.markdown(
+    f'<div class="small-note">Dashboard conectado a Google Sheets · Cache: {CACHE_TTL} segundos · Última lectura visual: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</div>',
+    unsafe_allow_html=True
+)
+st.markdown('</div>', unsafe_allow_html=True)
