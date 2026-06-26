@@ -522,13 +522,13 @@ ahora = datetime.now()
 minutos_desde_actualizacion = (ahora - ultima_fecha.to_pydatetime()).total_seconds() / 60 if pd.notna(ultima_fecha) else 999
 
 if minutos_desde_actualizacion <= 30:
-    estado_bot = "🟢 BOT ONLINE"
+    estado_bot = "🟢 ACTIVIDAD"
     status_class = "online"
 elif minutos_desde_actualizacion <= 120:
     estado_bot = "🟡 BOT SIN ACTIVIDAD RECIENTE"
     status_class = "warning"
 else:
-    estado_bot = "🔴 BOT OFFLINE"
+    estado_bot = "🔴 SIN ACTIVIDAD"
     status_class = "offline"
 
 if minutos_desde_actualizacion < 1:
