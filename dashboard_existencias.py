@@ -518,7 +518,8 @@ if df.empty:
     st.stop()
 
 ultima_fecha = df["Fecha"].max()
-ahora = datetime.now()
+from zoneinfo import ZoneInfo
+ahora = datetime.now(ZoneInfo("America/Monterrey")).replace(tzinfo=None)
 minutos_desde_actualizacion = (ahora - ultima_fecha.to_pydatetime()).total_seconds() / 60 if pd.notna(ultima_fecha) else 999
 
 if minutos_desde_actualizacion <= 30:
@@ -538,7 +539,7 @@ elif minutos_desde_actualizacion < 60:
 else:
     texto_actividad = f"Hace {int(minutos_desde_actualizacion // 60)} h {int(minutos_desde_actualizacion % 60)} min"
 
-ultima_lectura_visual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+ultima_lectura_visual = datetime.now(ZoneInfo("America/Monterrey")).strftime("%Y-%m-%d %H:%M:%S")
 
 st.markdown(
     f"""
