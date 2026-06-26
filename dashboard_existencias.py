@@ -816,7 +816,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown(
     """
     <div class="footer-brand">
-        <span>Powered by <b>EQUIPSA Intelligence</b> · Dashboard v2.1</span>
+        <span>Powered by <b>Aguilar Intelligence</b> · Dashboard v2.1</span>
         <span><span class="signature-name">Antonio Aguilar</span> · <span class="signature-role">EQUIPSA Innovation Lab</span> · 2026</span>
     </div>
     """,
